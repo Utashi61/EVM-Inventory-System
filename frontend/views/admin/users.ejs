@@ -1,0 +1,270 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'users'; %>
+
+<div class="app-layout">
+  <%- include('../partials/admin-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>User Management</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-create')">➕ Create User</button>
+      </div>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="card">
+        <div class="card-header"><h2>All Users</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Full Name</th><th>Username</th><th>Role</th>
+                <th>Email</th><th>Dzongkhag</th><th>Constituency</th><th>Polling Station</th>
+                <th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% users.forEach((u, i) => { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><strong><%= u.full_name %></strong></td>
+                <td><code><%= u.username %></code></td>
+                <td>
+                  <span class="badge
+                    <%= u.role === 'Admin' ? 'badge-primary' :
+                        u.role === 'DzEO'  ? 'badge-info' :
+                        u.role === 'DzERO' ? 'badge-warning' :
+                        u.role === 'EA'    ? 'badge-warning' :
+                        u.role === 'RO'    ? 'badge-success' : 'badge-secondary' %>">
+                    <%= u.role %>
+                  </span>
+                </td>
+                <td><%= u.email || '—' %></td>
+                <td><%= u.dzongkhag_name || '—' %></td>
+                <td><%= u.constituency_name || '—' %></td>
+                <td><%= u.polling_station_name || '—' %></td>
+                <td>
+                  <span class="badge <%= u.is_active ? 'badge-success' : 'badge-secondary' %>">
+                    <%= u.is_active ? 'Active' : 'Inactive' %>
+                  </span>
+                </td>
+                <td>
+                  <div class="flex gap-2">
+                    <button class="btn btn-sm btn-outline"
+                      onclick="openEditModal(<%= JSON.stringify(u) %>)">✏️ Edit</button>
+                    <% if (u.is_active) { %>
+                    <form action="/admin/users/<%= u.id %>/deactivate" method="POST" id="deact-<%= u.id %>">
+                      <button type="button" class="btn btn-sm btn-danger"
+                              onclick="confirmDelete('deact-<%= u.id %>','Deactivate <%= u.username %>?')">
+                        🚫
+                      </button>
+                    </form>
+                    <% } else { %>
+                    <form action="/admin/users/<%= u.id %>/activate" method="POST" id="act-<%= u.id %>">
+                      <button type="button" class="btn btn-sm btn-success"
+                              onclick="confirmDelete('act-<%= u.id %>','Reactivate <%= u.username %>?')">
+                        ♻️ Reactivate
+                      </button>
+                    </form>
+                    <form action="/admin/users/<%= u.id %>/delete" method="POST" id="del-<%= u.id %>">
+                      <button type="button" class="btn btn-sm btn-danger"
+                              onclick="confirmDelete('del-<%= u.id %>','Permanently delete <%= u.username %>? This cannot be undone, and will only succeed if the account has no equipment/transfer/check history.')">
+                        🗑️ Delete
+                      </button>
+                    </form>
+                    <% } %>
+                  </div>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Create User -->
+<div id="modal-create" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>➕ Create New User</h3>
+      <button class="modal-close" onclick="closeModal('modal-create')">✕</button>
+    </div>
+    <form action="/admin/users/create" method="POST">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full Name <span class="required">*</span></label>
+          <input type="text" name="full_name" class="form-control" required placeholder="Full Name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Username <span class="required">*</span></label>
+          <input type="text" name="username" class="form-control" required placeholder="username">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Password <span class="required">*</span></label>
+          <input type="password" name="password" class="form-control" required placeholder="Password">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control" placeholder="email@example.com">
+          <small class="text-muted">Username &amp; password will be emailed to this address.</small>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role <span class="required">*</span></label>
+        <select name="role" id="create-role" class="form-control" required onchange="toggleRoleFields('create', this.value)">
+          <option value="">-- Select Role --</option>
+          <option value="Admin">Admin</option>
+          <option value="DzEO">DzEO</option>
+          <option value="DzERO">DzERO</option>
+          <option value="EA">EA (Electoral Assistant)</option>
+          <option value="RO">RO (Returning Officer)</option>
+        </select>
+      </div>
+      <div id="create-dzong-group" class="form-group" style="display:none;">
+        <label class="form-label">Dzongkhag</label>
+        <select name="dzongkhag_id" id="create-dzong" class="form-control"
+                onchange="loadConstituencies(this.value, document.getElementById('create-const'), null)">
+          <option value="">-- Select Dzongkhag --</option>
+          <% dzongkhags.forEach(dz => { %>
+          <option value="<%= dz.id %>"><%= dz.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div id="create-const-group" class="form-group" style="display:none;">
+        <label class="form-label">Constituency</label>
+        <select name="constituency_id" id="create-const" class="form-control">
+          <option value="">-- Select Dzongkhag First --</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Create User</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-create')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit User -->
+<div id="modal-edit" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ Edit User</h3>
+      <button class="modal-close" onclick="closeModal('modal-edit')">✕</button>
+    </div>
+    <form id="edit-user-form" action="" method="POST">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full Name <span class="required">*</span></label>
+          <input type="text" name="full_name" id="edit-full-name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" id="edit-email" class="form-control">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Username <span class="required">*</span></label>
+          <input type="text" name="username" id="edit-username" class="form-control" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input type="password" name="password" id="edit-password" class="form-control" autocomplete="new-password" placeholder="Leave blank to keep current password" minlength="6">
+          <small class="text-muted">Only fill this in if you want to reset this user's password.</small>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role</label>
+        <input type="text" id="edit-role-display" class="form-control" readonly>
+      </div>
+      <div id="edit-dzong-group" class="form-group">
+        <label class="form-label">Dzongkhag</label>
+        <select name="dzongkhag_id" id="edit-dzong" class="form-control"
+                onchange="loadConstituencies(this.value, document.getElementById('edit-const'), null)">
+          <option value="">-- None --</option>
+          <% dzongkhags.forEach(dz => { %>
+          <option value="<%= dz.id %>"><%= dz.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div id="edit-const-group" class="form-group" style="display:none;">
+        <label class="form-label">Constituency</label>
+        <select name="constituency_id" id="edit-const" class="form-control"
+                onchange="loadGewogsByConstituency(this.value, document.getElementById('edit-gewog'), null)">
+          <option value="">-- Select Dzongkhag First --</option>
+        </select>
+      </div>
+      <div id="edit-gewog-group" class="form-group" style="display:none;">
+        <label class="form-label">Gewog</label>
+        <select name="gewog_id" id="edit-gewog" class="form-control"
+                onchange="loadPollingStationsByGewog(this.value, document.getElementById('edit-station'), null)">
+          <option value="">-- Select Constituency First --</option>
+        </select>
+      </div>
+      <div id="edit-station-group" class="form-group" style="display:none;">
+        <label class="form-label">Polling Station</label>
+        <select name="polling_station_id" id="edit-station" class="form-control">
+          <option value="">-- Select Gewog First --</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-edit')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+<script>
+function toggleRoleFields(prefix, role) {
+  const dzong   = document.getElementById(`${prefix}-dzong-group`);
+  const cnst    = document.getElementById(`${prefix}-const-group`);
+  // Show dzongkhag for all non-Admin roles
+  dzong.style.display    = role && role !== 'Admin' ? 'block' : 'none';
+  // Constituency only for RO (DzEO/DzERO/EA are Dzongkhag-level only)
+  cnst.style.display     = role === 'RO' ? 'block' : 'none';
+}
+
+function openEditModal(user) {
+  document.getElementById('edit-user-form').action = `/admin/users/${user.id}/edit`;
+  document.getElementById('edit-full-name').value  = user.full_name || '';
+  document.getElementById('edit-email').value       = user.email || '';
+  document.getElementById('edit-username').value    = user.username || '';
+  document.getElementById('edit-password').value     = '';
+  document.getElementById('edit-role-display').value = user.role;
+
+  // Show/hide Constituency, Gewog, Polling Station based on this user's role
+  toggleRoleFields('edit', user.role);
+
+  const dzSel = document.getElementById('edit-dzong');
+  dzSel.value = user.dzongkhag_id || '';
+
+  const constSel = document.getElementById('edit-const');
+  const gewogSel = document.getElementById('edit-gewog');
+  const stationSel = document.getElementById('edit-station');
+
+  if (['RO','Presiding Officer'].includes(user.role) && user.dzongkhag_id) {
+    // Cascade: Dzongkhag → Constituency → (Gewog → Polling Station, PO only)
+    loadConstituencies(user.dzongkhag_id, constSel, user.constituency_id).then(() => {
+      if (user.role === 'Presiding Officer' && user.constituency_id) {
+        loadGewogsByConstituency(user.constituency_id, gewogSel, user.gewog_id).then(() => {
+          if (user.gewog_id) {
+            loadPollingStationsByGewog(user.gewog_id, stationSel, user.polling_station_id);
+          }
+        });
+      }
+    });
+  }
+
+  openModal('modal-edit');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'quarterly-check'; %>
+
+<div class="app-layout">
+  <%- include('../partials/dzeo-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Quarterly Equipment Check — <%= quarterLabel %></h1>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="alert alert-info">
+        ℹ️ Review every piece of equipment in <strong><%= currentUser.dzongkhag_name %></strong> this quarter (<%= quarterLabel %>) and confirm whether it is still
+        <strong>Functional</strong> or has become <strong>Non-Functional</strong>. Equipment already checked for <%= quarterLabel %> is marked ✅.
+      </div>
+
+      <!-- Equipment Checklist -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📋 Equipment Checklist</h2>
+          <span class="text-muted"><%= equipment.length %> item(s)</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Serial Number</th>
+                <th>Type</th>
+                <th>Current Status</th>
+                <th>Checked This Quarter</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!equipment || equipment.length === 0) { %>
+              <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📦</div><h3>No equipment found</h3></div></td></tr>
+              <% } %>
+              <% equipment.forEach((eq, i) => { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><strong><%= eq.serial_number %></strong></td>
+                <td><span class="badge badge-primary"><%= eq.equipment_type %></span></td>
+                <td>
+                  <span class="badge <%= eq.status === 'Functional' ? 'badge-success' : 'badge-danger' %>">
+                    <%= eq.status %>
+                  </span>
+                </td>
+                <td>
+                  <% if (eq.last_checked_quarter === quarterLabel) { %>
+                    <span class="badge badge-success">✅ <%= eq.last_check_status %></span>
+                  <% } else { %>
+                    <span class="badge badge-warning">⏳ Not checked</span>
+                  <% } %>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-accent"
+                          onclick="openCheckModal('<%= eq.id %>', '<%= eq.serial_number %>', '<%= eq.equipment_type %>', '<%= eq.last_checked_quarter === quarterLabel ? eq.last_check_status : eq.status %>', '<%= eq.last_check_fault || '' %>')">
+                    🔍 Update
+                  </button>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Check History -->
+      <div class="card">
+        <div class="card-header"><h2>📜 Check History</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Serial Number</th><th>Type</th><th>Quarter</th><th>Status</th><th>Fault Type</th><th>Remarks</th><th>Checked On</th></tr>
+            </thead>
+            <tbody>
+              <% if (!history || !history.length) { %>
+              <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📜</div><h3>No checks recorded yet</h3></div></td></tr>
+              <% } %>
+              <% (history || []).forEach((h, i) => { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><strong><%= h.serial_number %></strong></td>
+                <td><%= h.equipment_type %></td>
+                <td><%= h.quarter_label %></td>
+                <td><span class="badge <%= h.status === 'Functional' ? 'badge-success' : 'badge-danger' %>"><%= h.status %></span></td>
+                <td><%= h.fault_type || '—' %></td>
+                <td><%= h.remarks || '—' %></td>
+                <td><%= h.checked_at ? new Date(h.checked_at).toLocaleDateString() : '—' %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Update Functionality -->
+<div id="modal-check" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🔍 Update Functionality — <span id="check-eq-label"></span></h3>
+      <button class="modal-close" onclick="closeModal('modal-check')">✕</button>
+    </div>
+    <form action="/dzeo/quarterly-check" method="POST">
+      <input type="hidden" name="equipment_id" id="check-equipment-id">
+
+      <div class="form-group">
+        <label class="form-label">Functionality Status <span class="required">*</span></label>
+        <select name="status" id="check-status" class="form-control" required onchange="toggleCheckFaultType(this.value)">
+          <option value="Functional">✅ Functional — Working normally</option>
+          <option value="Non-Functional">❌ Non-Functional — Has a fault</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="check-fault-group" style="display:none;">
+        <label class="form-label">Fault Type <span class="required">*</span></label>
+        <select name="fault_type" id="check-fault-type" class="form-control">
+          <option value="">-- Select Fault --</option>
+          <% (faultTypes || []).forEach(ft => { %>
+          <option value="<%= ft %>"><%= ft %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Remarks</label>
+        <textarea name="remarks" id="check-remarks" class="form-control" rows="3" placeholder="Any observations about this equipment..."></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">💾 Save Quarterly Check</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-check')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+<script>
+function openCheckModal(equipmentId, serial, type, currentStatus, currentFault) {
+  document.getElementById('check-equipment-id').value = equipmentId;
+  document.getElementById('check-eq-label').textContent = `${serial} (${type})`;
+  const statusSel = document.getElementById('check-status');
+  statusSel.value = currentStatus === 'Non-Functional' ? 'Non-Functional' : 'Functional';
+  toggleCheckFaultType(statusSel.value);
+  if (currentFault) document.getElementById('check-fault-type').value = currentFault;
+  openModal('modal-check');
+}
+function toggleCheckFaultType(val) {
+  const grp = document.getElementById('check-fault-group');
+  const sel = document.getElementById('check-fault-type');
+  if (val === 'Non-Functional') {
+    grp.style.display = 'block';
+    sel.setAttribute('required', 'required');
+  } else {
+    grp.style.display = 'none';
+    sel.removeAttribute('required');
+    sel.value = '';
+  }
+}
+</script>
+</body>
+</html>

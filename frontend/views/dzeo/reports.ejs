@@ -1,0 +1,96 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'reports'; %>
+
+<div class="app-layout">
+  <%- include('../partials/dzeo-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Reports — <%= currentUser.dzongkhag_name %></h1>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>📑 Generate Reports</h2>
+          <span class="text-muted">Reports are scoped to your Dzongkhag: <strong><%= currentUser.dzongkhag_name %></strong></span>
+        </div>
+        <div class="card-body">
+
+          <h3 style="font-size:15px; color:var(--primary); margin-bottom:16px;">Equipment Reports</h3>
+          <div class="report-options">
+            <div class="report-card">
+              <div class="report-icon">📦</div>
+              <h4>Equipment List</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">All equipment in your Dzongkhag</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/dzeo/reports/generate?report_type=inventory&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/dzeo/reports/generate?report_type=inventory&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+
+            <div class="report-card">
+              <div class="report-icon">✅</div>
+              <h4>Functional Equipment</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">Only functional equipment</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/dzeo/reports/generate?report_type=functional&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/dzeo/reports/generate?report_type=functional&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+
+            <div class="report-card">
+              <div class="report-icon">❌</div>
+              <h4>Non-Functional Equipment</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">Non-functional equipment only</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/dzeo/reports/generate?report_type=non_functional&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/dzeo/reports/generate?report_type=non_functional&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="font-size:15px; color:var(--primary); margin-top:28px; margin-bottom:16px;">Transfer Reports</h3>
+          <div class="report-options">
+            <div class="report-card">
+              <div class="report-icon">🔄</div>
+              <h4>Transfer History</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">All transfers from your Dzongkhag</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/dzeo/reports/generate?report_type=transfer&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/dzeo/reports/generate?report_type=transfer&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="font-size:15px; color:var(--primary); margin-top:28px; margin-bottom:16px;">Functionality Check &amp; Surrender Reports</h3>
+          <div class="report-options">
+            <div class="report-card">
+              <div class="report-icon">🗓️</div>
+              <h4>Quarterly Functionality Check</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">Check history for your Dzongkhag (every quarter)</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/dzeo/reports/generate?report_type=quarterly_check&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/dzeo/reports/generate?report_type=quarterly_check&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+            <div class="report-card">
+              <div class="report-icon">📮</div>
+              <h4>Surrender Equipment</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">Equipment your Dzongkhag surrendered to HQ</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/dzeo/reports/generate?report_type=surrender&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/dzeo/reports/generate?report_type=surrender&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

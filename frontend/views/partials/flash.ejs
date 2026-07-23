@@ -1,0 +1,13 @@
+<% if (flashMessages && (flashMessages.success.length || flashMessages.error.length || flashMessages.info.length)) { %>
+<div class="flash-messages">
+  <% flashMessages.success.forEach(msg => { %>
+    <div class="alert alert-success">✅ <%= msg %></div>
+  <% }) %>
+  <% flashMessages.error.forEach(msg => { %>
+    <div class="alert alert-error">⚠️ <%= msg %></div>
+  <% }) %>
+  <% flashMessages.info.forEach(msg => { %>
+    <div class="alert alert-info">ℹ️ <%= msg %></div>
+  <% }) %>
+</div>
+<% } %>

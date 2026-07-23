@@ -1,0 +1,98 @@
+<%- include('../partials/head') %>
+<% locals.activePage = equipment ? 'equipment' : 'equipment-add'; %>
+
+<div class="app-layout">
+  <%- include('../partials/dzeo-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1><%= equipment ? 'Edit Equipment' : 'Add New Equipment' %></h1>
+      <div class="topbar-actions">
+        <a href="/dzeo/equipment" class="btn btn-outline btn-sm">← Back to List</a>
+      </div>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="card" style="max-width: 680px;">
+        <div class="card-header">
+          <h2><%= equipment ? '✏️ Edit Equipment' : '➕ Add Equipment' %></h2>
+          <span class="text-muted">Dzongkhag: <strong><%= currentUser.dzongkhag_name %></strong></span>
+        </div>
+        <div class="card-body">
+          <form action="<%= equipment ? '/dzeo/equipment/' + equipment.id + '/edit' : '/dzeo/equipment/add' %>" method="POST">
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Equipment Type <span class="required">*</span></label>
+                <select name="equipment_type" id="equipment_type" class="form-control" required
+                        onchange="updateSerialPrefix(this.value)">
+                  <option value="">-- Select Type --</option>
+                  <% ['Ballot Unit', 'Control Unit', 'Battery'].forEach(t => { %>
+                  <option value="<%= t %>" <%= equipment && equipment.equipment_type === t ? 'selected' : '' %>><%= t %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Serial Number <span class="required">*</span></label>
+                <div style="display:flex;align-items:center;gap:0;">
+                  <span id="serial-prefix"
+                        style="padding:8px 10px;background:#f0f4ff;border:1px solid #cbd5e1;border-right:none;border-radius:6px 0 0 6px;font-weight:700;color:#1E3A5F;font-size:13px;min-width:38px;text-align:center;">
+                    <%= equipment ? (equipment.equipment_type === 'Ballot Unit' ? 'BU-' : equipment.equipment_type === 'Control Unit' ? 'CU-' : equipment.equipment_type === 'Battery' ? 'BT-' : '') : '' %>
+                  </span>
+                  <input type="text" name="serial_number" id="serial_number_input" class="form-control"
+                         value="<%= equipment ? equipment.serial_number.replace(/^(BU-|CU-|BT-)/, '') : '' %>"
+                         placeholder="e.g. 2232" required
+                         style="border-radius:0 6px 6px 0;border-left:none;">
+                </div>
+                <small class="text-muted">Prefix (BU-, CU-, BT-) added automatically based on type.</small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Dzongkhag</label>
+                <input type="text" class="form-control" value="<%= currentUser.dzongkhag_name %>" readonly>
+                <small class="text-muted">Equipment is always added to your own Dzongkhag.</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Equipment Status <span class="required">*</span></label>
+                <select name="status" class="form-control" required>
+                  <option value="Functional" <%= !equipment || equipment.status === 'Functional' ? 'selected' : '' %>>Functional</option>
+                  <option value="Non-Functional" <%= equipment && equipment.status === 'Non-Functional' ? 'selected' : '' %>>Non-Functional</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                <%= equipment ? '💾 Update Equipment' : '➕ Add Equipment' %>
+              </button>
+              <a href="/dzeo/equipment" class="btn btn-outline">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+<script>
+const PREFIXES = { 'Ballot Unit': 'BU-', 'Control Unit': 'CU-', 'Battery': 'BT-' };
+function updateSerialPrefix(type) {
+  document.getElementById('serial-prefix').textContent = PREFIXES[type] || '';
+}
+document.querySelector('form').addEventListener('submit', function() {
+  const type   = document.getElementById('equipment_type').value;
+  const prefix = PREFIXES[type] || '';
+  const inp    = document.getElementById('serial_number_input');
+  const clean  = inp.value.trim().replace(/^(BU-|CU-|BT-)/i, '');
+  inp.value = prefix + clean;
+});
+window.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('equipment_type');
+  if (sel && sel.value) updateSerialPrefix(sel.value);
+});
+</script>
+</body>
+</html>

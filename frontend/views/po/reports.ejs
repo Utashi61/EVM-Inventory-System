@@ -1,0 +1,54 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'reports'; %>
+
+<div class="app-layout">
+  <%- include('../partials/po-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Reports — <%= currentUser.polling_station_name || currentUser.constituency_name %></h1>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>📑 Generate Reports</h2>
+          <span class="text-muted">Reports are scoped to you: <strong><%= currentUser.full_name %></strong></span>
+        </div>
+        <div class="card-body">
+
+          <h3 style="font-size:15px; color:var(--primary); margin-bottom:16px;">Equipment Reports</h3>
+          <div class="report-options">
+            <div class="report-card">
+              <div class="report-icon">📦</div>
+              <h4>Equipment List</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">Equipment assigned to your Polling Station</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/po/reports/generate?report_type=inventory&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/po/reports/generate?report_type=inventory&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="font-size:15px; color:var(--primary); margin-top:28px; margin-bottom:16px;">Return Reports</h3>
+          <div class="report-options">
+            <div class="report-card">
+              <div class="report-icon">↩️</div>
+              <h4>Return History</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">All equipment returned by you to your RO</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/po/reports/generate?report_type=return&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/po/reports/generate?report_type=return&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

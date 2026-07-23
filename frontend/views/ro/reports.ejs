@@ -1,0 +1,67 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'reports'; %>
+
+<div class="app-layout">
+  <%- include('../partials/ro-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Reports — <%= currentUser.constituency_name %></h1>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>📑 Generate Reports</h2>
+          <span class="text-muted">Reports are scoped to your constituency: <strong><%= currentUser.constituency_name %></strong></span>
+        </div>
+        <div class="card-body">
+
+          <h3 style="font-size:15px; color:var(--primary); margin-bottom:16px;">Equipment Reports</h3>
+          <div class="report-options">
+            <div class="report-card">
+              <div class="report-icon">📦</div>
+              <h4>Equipment List</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">Equipment assigned to your constituency</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/ro/reports/generate?report_type=inventory&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/ro/reports/generate?report_type=inventory&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="font-size:15px; color:var(--primary); margin-top:28px; margin-bottom:16px;">Return Reports</h3>
+          <div class="report-options">
+            <div class="report-card">
+              <div class="report-icon">↩️</div>
+              <h4>Return History</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">All equipment returned by you</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/ro/reports/generate?report_type=return&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/ro/reports/generate?report_type=return&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="font-size:15px; color:var(--primary); margin-top:28px; margin-bottom:16px;">Issue Reports</h3>
+          <div class="report-options">
+            <div class="report-card">
+              <div class="report-icon">📤</div>
+              <h4>Issued to Presiding Officers</h4>
+              <p class="text-muted" style="font-size:12px; margin:8px 0;">Equipment you've issued down to Polling Stations</p>
+              <div class="flex gap-2 mt-1" style="justify-content:center;">
+                <a href="/ro/reports/generate?report_type=issued&format=pdf" target="_blank" class="btn btn-sm btn-danger">📄 PDF</a>
+                <a href="/ro/reports/generate?report_type=issued&format=excel" target="_blank" class="btn btn-sm btn-success">📊 Excel</a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

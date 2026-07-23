@@ -1,0 +1,37 @@
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon"><img src="/images/logo.png" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextSibling.style.display='block'"><span style="display:none;font-size:32px;">🗳️</span></div>
+    <h2>EVM Inventory System</h2>
+    <p>Election Commission of Bhutan</p>
+  </div>
+  <div class="sidebar-user">
+    <div class="user-name"><%= currentUser.full_name %></div>
+    <div class="user-role"><%= currentUser.role %><% if(currentUser.constituency_name){ %> — <%= currentUser.constituency_name %><% } %></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Overview</div>
+    <a href="/ro/dashboard" class="<%= locals.activePage === 'dashboard' ? 'active' : '' %>">
+      <span class="nav-icon">📊</span> Dashboard
+    </a>
+    <div class="nav-section-title">Equipment</div>
+    <a href="/ro/equipment" class="<%= locals.activePage === 'equipment' ? 'active' : '' %>">
+      <span class="nav-icon">📦</span> My Equipment
+    </a>
+    <div class="nav-section-title">Operations</div>
+    <a href="/ro/issue-to" class="<%= locals.activePage === 'issue-to' ? 'active' : '' %>">
+      <span class="nav-icon">📍</span> Issue To
+    </a>
+    <a href="/ro/return" class="<%= locals.activePage === 'return' ? 'active' : '' %>">
+      <span class="nav-icon">↩️</span> Return Equipment
+    </a>
+    <div class="nav-section-title">Reports</div>
+    <a href="/ro/reports" class="<%= locals.activePage === 'reports' ? 'active' : '' %>">
+      <span class="nav-icon">📑</span> Reports
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="/change-password">🔐 Change Password</a>
+    <div style="margin-top:12px;"></div>
+    <a href="/logout">🚪 Sign Out</a>
+  </div>
+</aside>

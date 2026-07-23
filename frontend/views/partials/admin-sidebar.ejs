@@ -1,0 +1,55 @@
+<aside class="sidebar">
+  <div class="sidebar-brand" style="text-align: center; padding: 20px 15px 10px 15px;">
+    
+    <!-- Made the image itself circular, smaller (75px), and added a subtle glow border -->
+    <img src="/images/logo.png" alt="ECB Logo" style="
+      width: 75px; 
+      height: 75px; 
+      border-radius: 50%; 
+      display: block; 
+      margin: 0 auto 12px auto;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    ">
+    
+  </div>
+  <div class="sidebar-user">
+    <div class="user-name"><%= currentUser.full_name %></div>
+    <div class="user-role"><%= currentUser.role %></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Overview</div>
+    <a href="/admin/dashboard" class="<%= locals.activePage === 'dashboard' ? 'active' : '' %>">
+      <span class="nav-icon">📊</span> Dashboard
+    </a>
+    <div class="nav-section-title">Equipment</div>
+    <a href="/admin/equipment" class="<%= locals.activePage === 'equipment' ? 'active' : '' %>">
+      <span class="nav-icon">📦</span> Equipment List
+    </a>
+    <a href="/admin/equipment/add" class="<%= locals.activePage === 'equipment-add' ? 'active' : '' %>">
+      <span class="nav-icon">➕</span> Add Equipment
+    </a>
+    <div class="nav-section-title">Operations</div>
+    <a href="/admin/transfers" class="<%= locals.activePage === 'transfers' ? 'active' : '' %>">
+      <span class="nav-icon">🔄</span> Transfers
+    </a>
+    <div class="nav-section-title">Administration</div>
+    <a href="/admin/users" class="<%= locals.activePage === 'users' ? 'active' : '' %>">
+      <span class="nav-icon">👥</span> User Management
+    </a>
+    <a href="/admin/reports" class="<%= locals.activePage === 'reports' ? 'active' : '' %>">
+      <span class="nav-icon">📑</span> Reports
+    </a>
+    <a href="/admin/transfer-forms" class="<%= locals.activePage === 'transfer-forms' ? 'active' : '' %>">
+      <span class="nav-icon">📋</span> Signed Forms
+    </a>
+    <a href="/admin/surrender/upload" class="<%= locals.activePage === 'surrender-upload' ? 'active' : '' %>">
+      <span class="nav-icon">📤</span> Upload Surrender
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="/change-password">🔐 Change Password</a>
+    <div style="margin-top:12px;"></div>
+    <a href="/logout">🚪 Sign Out</a>
+  </div>
+</aside>

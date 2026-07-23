@@ -1,0 +1,208 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'dashboard'; %>
+
+<div class="app-layout">
+  <%- include('../partials/admin-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Dashboard Overview</h1>
+      <div class="topbar-actions">
+        <a href="/admin/reports" class="btn btn-outline btn-sm">📑 Reports</a>
+      </div>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <!-- ECB Inventory & ECIL Banner (no total — just the two live counts) -->
+      <div style="background:linear-gradient(135deg,#1E3A5F,#2d5986);border-radius:12px;padding:20px 28px;margin-bottom:20px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:center;">
+          <div style="text-align:center;">
+            <div style="font-size:42px;font-weight:700;color:#6EE7B7;"><%= summary.ecb_total %></div>
+            <div style="font-size:13px;opacity:0.85;margin-top:2px;">In ECB Inventory</div>
+          </div>
+          <div style="width:1px;height:60px;background:rgba(255,255,255,0.2);"></div>
+          <div style="text-align:center;">
+            <div style="font-size:42px;font-weight:700;color:#FCA5A5;"><%= summary.ecil_count %></div>
+            <div style="font-size:13px;opacity:0.85;margin-top:2px;">Surrendered to ECIL</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="/admin/ecil/report?format=excel" class="btn btn-sm" style="background:#22c55e;color:#fff;border:none;font-weight:600;">📊 ECIL Excel</a>
+          <a href="/admin/ecil/report?format=pdf"   class="btn btn-sm" style="background:#ef4444;color:#fff;border:none;font-weight:600;">📄 ECIL PDF</a>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon"></div>
+          <div class="stat-value"><%= summary.total_equipment %></div>
+          <div class="stat-label">At Thimphu HQ</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon"></div>
+          <div class="stat-value"><%= summary.non_functional %></div>
+          <div class="stat-label">Non-Functional</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon"></div>
+          <div class="stat-value"><%= summary.functional %></div>
+          <div class="stat-label">Functional</div>
+        </div>
+        <div class="stat-card accent">
+          <div class="stat-icon"></div>
+          <div class="stat-value"><%= summary.transferred_count %></div>
+          <div class="stat-label">Transferred to Dzongkhag</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon"></div>
+          <div class="stat-value"><%= summary.received_count %></div>
+          <div class="stat-label">Received from Dzongkhag</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-icon"></div>
+          <div class="stat-value"><%= summary.ecil_count %></div>
+          <div class="stat-label">Surrendered to ECIL</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"></div>
+          <div class="stat-value"><%= summary.total_users %></div>
+          <div class="stat-label">Officers</div>
+        </div>
+      </div>
+
+      <!-- Surrender to ECIL — equipment received from Dzongkhag, ready to dispatch -->
+      <% if (readyForEcil && readyForEcil.length > 0) { %>
+      <div class="card" style="border-left:4px solid #7c3aed;margin-bottom:20px;">
+        <div class="card-header">
+          <h2>🚀 Surrender to ECIL (Hyderabad)</h2>
+          <span class="badge" style="background:#7c3aed;color:#fff;"><%= readyForEcil.length %> item(s) available</span>
+        </div>
+        <div class="alert alert-info" style="margin:12px 16px 0;">
+          Equipment received from Dzongkhags is listed below. Select items to dispatch to ECIL Hyderabad.
+          Once surrendered to ECIL, the equipment is removed from ECB inventory permanently.
+        </div>
+        <div class="table-wrapper">
+          <form action="/admin/ecil/surrender" method="POST">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" id="ecil-select-all" onchange="document.querySelectorAll('.ecil-cb').forEach(c=>c.checked=this.checked)"></th>
+                  <th>Serial No.</th><th>Type</th><th>Status</th><th>Fault Type</th><th>Dzongkhag</th><th>Received On</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% readyForEcil.forEach(eq => { %>
+                <tr>
+                  <td><input type="checkbox" name="equipment_ids" value="<%= eq.id %>" class="ecil-cb"></td>
+                  <td><strong><%= eq.serial_number %></strong></td>
+                  <td><span class="badge badge-primary"><%= eq.equipment_type %></span></td>
+                  <td><span class="badge badge-danger">Non-Functional</span></td>
+                  <td><%= eq.fault_type || '—' %></td>
+                  <td><%= eq.dzongkhag_name || '—' %></td>
+                  <td><%= eq.received_at ? new Date(eq.received_at).toLocaleDateString() : '—' %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+            <div style="padding:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-top:1px solid #e2e8f0;">
+              <input type="date" name="ecil_date" class="form-control" style="width:180px;"
+                     value="<%= new Date().toISOString().split('T')[0] %>" placeholder="Dispatch Date">
+              <input type="text" name="remarks" class="form-control" style="flex:1;min-width:200px;"
+                     placeholder="Remarks (optional — e.g. dispatch note/reference number)">
+              <button type="submit" class="btn btn-primary"
+                      onclick="return confirm('Confirm surrender of selected equipment to ECIL Hyderabad? This cannot be undone.')"
+                      style="background:#7c3aed;border-color:#7c3aed;">
+                🚀 Surrender to ECIL
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- Pending Surrendered Equipment from DzEOs -->
+      <% if (pendingSurrenders && pendingSurrenders.length > 0) { %>
+      <div class="card" style="border-left: 4px solid var(--accent);">
+        <div class="card-header">
+          <h2>📮 Pending Surrendered Equipment — Action Required</h2>
+          <span class="badge badge-warning"><%= pendingSurrenders.length %> awaiting</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>From DzEO</th><th>Dzongkhag</th><th>Serial No.</th><th>Type</th><th>Fault Type</th><th>Remarks</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <% pendingSurrenders.forEach(t => { %>
+              <tr>
+                <td><strong><%= t.from_user %></strong></td>
+                <td><%= t.dzongkhag_name %></td>
+                <td><code><%= t.serial_number %></code></td>
+                <td><%= t.equipment_type %></td>
+                <td>
+                  <% if (t.fault_type) { %>
+                    <span class="badge badge-danger"><%= t.fault_type %></span>
+                  <% } else { %>
+                    <span class="badge badge-success">Functional</span>
+                  <% } %>
+                </td>
+                <td><%= t.remarks || '—' %></td>
+                <td>
+                  <form action="/admin/surrender/<%= t.transfer_id %>/receive" method="POST">
+                    <button type="submit" class="btn btn-sm btn-success">✅ Confirm Receipt</button>
+                  </form>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- Dzongkhag Overview Table -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Dzongkhag Equipment Overview</h2>
+          <span class="text-muted">Click a row to view details</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Dzongkhag</th>
+                <th>Total Equipment</th>
+                <th>Non-Functional</th>
+                <th>Functional</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% dzongkhagSummary.forEach((dz, i) => { %>
+              <tr class="clickable-row" onclick="window.location='/admin/dzongkhag/<%= dz.dzongkhag_id %>'">
+                <td><%= i + 1 %></td>
+                <td><strong><%= dz.dzongkhag_name %></strong></td>
+                <td><%= dz.total_equipment %></td>
+                <td><span class="badge badge-danger"><%= dz.non_functional %></span></td>
+                <td><span class="badge badge-success"><%= dz.functional %></span></td>
+                
+                <td>
+                  <a href="/admin/dzongkhag/<%= dz.dzongkhag_id %>" class="btn btn-sm btn-outline" onclick="event.stopPropagation()">
+                    View Details
+                  </a>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

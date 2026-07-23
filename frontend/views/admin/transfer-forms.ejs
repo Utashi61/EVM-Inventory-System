@@ -1,0 +1,83 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'transfer-forms'; %>
+
+<div class="app-layout">
+  <%- include('../partials/admin-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Uploaded Signed Forms</h1>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="alert alert-info">
+        📋 All signed Issue Receipts and Return Receipts uploaded by Returning Officers. Download any file to view the signed original.
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Signed Forms — All ROs</h2>
+          <span class="text-muted">Total: <%= forms.length %> file(s)</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Form Type</th>
+                <th>Equipment</th>
+                <th>Location</th>
+                <th>Transfer Date</th>
+                <th>Uploaded By (RO)</th>
+                <th>Uploaded On</th>
+                <th>Download</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!forms || !forms.length) { %>
+              <tr><td colspan="8">
+                <div class="empty-state">
+                  <div class="empty-icon">📋</div>
+                  <h3>No signed forms uploaded yet</h3>
+                  <p>When an RO uploads a signed Issue or Return Receipt, it will appear here.</p>
+                </div>
+              </td></tr>
+              <% } else { %>
+                <% forms.forEach((f, i) => { %>
+                <tr>
+                  <td><%= i + 1 %></td>
+                  <td>
+                    <span class="badge <%= f.form_type === 'issue' ? 'badge-primary' : f.form_type === 'receive_back' ? 'badge-success' : 'badge-info' %>">
+                      <%= f.form_type === 'issue' ? '📤 Issue Receipt' : f.form_type === 'receive_back' ? '✅ Receive-Back Receipt' : '↩️ Return Receipt' %>
+                    </span>
+                  </td>
+                  <td>
+                    <strong><%= f.serial_number %></strong>
+                    <span class="text-muted" style="font-size:11px;"> (<%= f.equipment_type %>)</span>
+                  </td>
+                  <td><%= f.form_type === 'issue' ? f.to_location : f.from_location %></td>
+                  <td><%= f.transfer_date ? new Date(f.transfer_date).toLocaleDateString() : '—' %></td>
+                  <td><%= f.uploaded_by_name %></td>
+                  <td><%= new Date(f.uploaded_at).toLocaleDateString() %></td>
+                  <td>
+                    <a href="/admin/download-form/<%= f.id %>"
+                       class="btn btn-sm btn-success"
+                       title="Download <%= f.original_filename %>">
+                      📥 <%= f.original_filename.length > 20 ? f.original_filename.substring(0,18)+'…' : f.original_filename %>
+                    </a>
+                  </td>
+                </tr>
+                <% }) %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'equipment'; %>
+
+<div class="app-layout">
+  <%- include('../partials/po-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>My Equipment — <%= currentUser.polling_station_name || 'Assigned Area' %></h1>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="alert alert-info">
+        🔒 You can view equipment assigned to your Polling Station. To add, edit, or delete equipment, contact your RO.
+      </div>
+
+      <!-- Incoming Pending Transfers Section -->
+      <% if (typeof pendingTransfers !== 'undefined' && pendingTransfers.length > 0) { %>
+        <div class="card" style="border: 2px solid #ffc107; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <div class="card-header" style="background-color: #fff3cd; border-bottom: 1px solid #ffeeba;">
+            <h2 style="color: #856404; display: flex; align-items: center; gap: 8px;">⚠️ Incoming Transfers Awaiting Acceptance</h2>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr style="background-color: #fff8e1;">
+                  <th>Transfer Date</th>
+                  <th>Serial No.</th>
+                  <th>Type</th>
+                  <th>From (RO)</th>
+                  <th>Remarks</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% pendingTransfers.forEach(t => { %>
+                  <tr>
+                    <td><%= new Date(t.transfer_date).toLocaleDateString() %></td>
+                    <td><strong style="color: #1a202c;"><%= t.serial_number %></strong></td>
+                    <td><span class="badge badge-primary"><%= t.equipment_type %></span></td>
+                    <td><%= t.from_user || 'Returning Officer' %></td>
+                    <td><span class="text-muted"><%= t.remarks || '—' %></span></td>
+                    <td>
+                      <form action="/po/transfers/<%= t.transfer_id %>/accept" method="POST" style="display:inline;">
+                        <button type="submit" class="btn btn-success btn-sm" style="background-color: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                          ✅ Accept & Receive
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- Filter Bar -->
+      <form method="GET" action="/po/equipment">
+        <div class="filter-bar">
+          <input type="text" name="search" value="<%= (typeof query !== 'undefined' && query.search) ? query.search : '' %>"
+                 class="form-control search-input" placeholder="🔍 Search by Serial No...">
+          <select name="type" class="form-control">
+            <option value="">All Types</option>
+            <option value="Ballot Unit" <%= (typeof query !== 'undefined' && query.type === 'Ballot Unit') ? 'selected' : '' %>>Ballot Unit</option>
+            <option value="Control Unit" <%= (typeof query !== 'undefined' && query.type === 'Control Unit') ? 'selected' : '' %>>Control Unit</option>
+            <option value="Battery" <%= (typeof query !== 'undefined' && query.type === 'Battery') ? 'selected' : '' %>>Battery</option>
+          </select>
+          <select name="status" class="form-control">
+            <option value="">All Status</option>
+            <option value="Functional" <%= (typeof query !== 'undefined' && query.status === 'Functional') ? 'selected' : '' %>>Functional</option>
+            <option value="Non-Functional" <%= (typeof query !== 'undefined' && query.status === 'Non-Functional') ? 'selected' : '' %>>Non-Functional</option>
+          </select>
+          <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+          <a href="/po/equipment" class="btn btn-outline btn-sm">Clear</a>
+        </div>
+      </form>
+
+      <!-- Main Equipment Inventory Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Equipment Assigned to Me</h2>
+          <span class="text-muted">Total: <%= (typeof pagination !== 'undefined' && pagination.total) ? pagination.total : equipment.length %> items</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Serial Number</th>
+                <th>Type</th>
+                <th>Dzongkhag</th>
+                <th>Constituency</th>
+                <th>Status</th>
+                <th>Transfer Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!equipment || !equipment.length) { %>
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <h3>No equipment assigned</h3>
+                    <p>Equipment will appear here once your RO issues it to you.</p>
+                  </div>
+                </td>
+              </tr>
+              <% } else { %>
+                <% equipment.forEach((eq, i) => { %>
+                <tr>
+                  <td>
+                    <% if (typeof pagination !== 'undefined' && pagination.page) { %>
+                      <%= (pagination.page - 1) * pagination.limit + i + 1 %>
+                    <% } else { %>
+                      <%= i + 1 %>
+                    <% } %>
+                  </td>
+                  <td><strong><%= eq.serial_number %></strong></td>
+                  <td><span class="badge badge-primary"><%= eq.equipment_type %></span></td>
+                  <td><%= eq.dzongkhag_name || '—' %></td>
+                  <td><%= eq.constituency_name || '—' %></td>
+                  <td>
+                    <span class="badge <%= eq.status === 'Functional' ? 'badge-success' : 'badge-danger' %>">
+                      <%= eq.status %>
+                    </span>
+                  </td>
+                  <td>
+                    <% if (eq.transfer_date) { %>
+                      <%= new Date(eq.transfer_date).toLocaleDateString() %>
+                    <% } else { %>
+                      —
+                    <% } %>
+                  </td>
+                </tr>
+                <% }) %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+
+        <% if (typeof pagination !== 'undefined' && pagination.pages > 1) { %>
+        <div style="padding: 16px 24px; border-top: 1px solid #e2e8f0;">
+          <div class="pagination">
+            <% if (pagination.page > 1) { %>
+              <a href="?page=<%= pagination.page - 1 %>">← Prev</a>
+            <% } else { %>
+              <span class="disabled">← Prev</span>
+            <% } %>
+            <% for (let p = 1; p <= pagination.pages; p++) { %>
+              <% if (p === pagination.page) { %>
+                <span class="active"><%= p %></span>
+              <% } else { %>
+                <a href="?page=<%= p %>"><%= p %></a>
+              <% } %>
+            <% } %>
+            <% if (pagination.page < pagination.pages) { %>
+              <a href="?page=<%= pagination.page + 1 %>">Next →</a>
+            <% } else { %>
+              <span class="disabled">Next →</span>
+            <% } %>
+          </div>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

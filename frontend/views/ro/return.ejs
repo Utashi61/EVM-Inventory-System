@@ -1,0 +1,165 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'return'; %>
+
+<div class="app-layout">
+  <%- include('../partials/ro-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Return Equipment</h1>
+      <div class="topbar-actions">
+        <% if (equipment && equipment.length > 0) { %>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-return')">↩️ Return Equipment</button>
+        <% } %>
+      </div>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <% if (!equipment || equipment.length === 0) { %>
+      <div class="alert alert-info">ℹ️ You have no equipment to return. Equipment will appear here once issued to you by your Dzongkhag office.</div>
+      <% } else { %>
+      <div class="alert alert-warning">⚠️ You currently hold <strong><%= equipment.length %></strong> equipment item(s). Return them to your Dzongkhag office (DzEO/DzERO/EA) after elections.</div>
+      <% } %>
+
+      <!-- Currently Held -->
+      <% if (equipment && equipment.length > 0) { %>
+      <div class="card">
+        <div class="card-header">
+          <h2>📦 Equipment Currently With You</h2>
+          <span class="text-muted"><%= equipment.length %> item(s)</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Serial Number</th><th>Type</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <% equipment.forEach((eq, i) => { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><strong><%= eq.serial_number %></strong></td>
+                <td><span class="badge badge-primary"><%= eq.equipment_type %></span></td>
+                <td><span class="badge <%= eq.status === 'Functional' ? 'badge-success' : 'badge-danger' %>"><%= eq.status %></span></td>
+                <td>
+                  <button class="btn btn-sm btn-accent"
+                          onclick="prefillReturn('<%= eq.id %>', '<%= eq.serial_number %>', '<%= eq.equipment_type %>')">
+                    ↩️ Return This
+                  </button>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- Return History -->
+      <div class="card">
+        <div class="card-header"><h2>📋 Return History</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Serial Number</th><th>Type</th><th>Status</th><th>Fault Type</th><th>Remarks</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+              <% if (!returnHistory || !returnHistory.length) { %>
+              <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><h3>No return history</h3></div></td></tr>
+              <% } %>
+              <% (returnHistory || []).forEach((t, i) => { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><strong><%= t.serial_number %></strong></td>
+                <td><span class="badge badge-primary"><%= t.equipment_type %></span></td>
+                <td><span class="badge badge-info"><%= t.status %></span></td>
+                <td>
+                  <% if (t.fault_type) { %>
+                    <span class="badge badge-danger"><%= t.fault_type %></span>
+                  <% } else { %>
+                    <span class="badge badge-success">Functional</span>
+                  <% } %>
+                </td>
+                <td><%= t.remarks || '—' %></td>
+                <td><%= t.updated_at ? new Date(t.updated_at).toLocaleDateString() : '—' %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Return Equipment -->
+<div id="modal-return" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>↩️ Return Equipment to Dzongkhag Office</h3>
+      <button class="modal-close" onclick="closeModal('modal-return')">✕</button>
+    </div>
+    <form action="/ro/return" method="POST">
+      <div class="form-group">
+        <label class="form-label">Select Equipment <span class="required">*</span></label>
+        <select name="equipment_id" id="return-equipment" class="form-control" required>
+          <option value="">-- Select Equipment --</option>
+          <% (equipment || []).forEach(eq => { %>
+          <option value="<%= eq.id %>"><%= eq.serial_number %> (<%= eq.equipment_type %>)</option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Condition Status <span class="required">*</span></label>
+        <select name="condition_status" id="condition-status" class="form-control" required
+                onchange="toggleFaultType(this.value)">
+          <option value="Functional">✅ Functional — Working normally</option>
+          <option value="Non-Functional">❌ Non-Functional — Has a fault</option>
+        </select>
+      </div>
+
+      <!-- Fault type — shown only when Non-Functional selected -->
+      <div class="form-group" id="fault-type-group" style="display:none;">
+        <label class="form-label">Fault Type <span class="required">*</span></label>
+        <select name="fault_type" id="fault-type" class="form-control">
+          <option value="">-- Select Fault --</option>
+          <% (faultTypes || []).forEach(ft => { %>
+          <option value="<%= ft %>"><%= ft %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Remarks</label>
+        <textarea name="remarks" class="form-control" rows="3" placeholder="Describe condition or any issues..."></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">↩️ Confirm Return</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-return')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+<script>
+function prefillReturn(equipmentId) {
+  document.getElementById('return-equipment').value = equipmentId;
+  openModal('modal-return');
+}
+function toggleFaultType(val) {
+  const grp = document.getElementById('fault-type-group');
+  const sel = document.getElementById('fault-type');
+  if (val === 'Non-Functional') {
+    grp.style.display = 'block';
+    sel.setAttribute('required', 'required');
+  } else {
+    grp.style.display = 'none';
+    sel.removeAttribute('required');
+    sel.value = '';
+  }
+}
+</script>
+</body>
+</html>

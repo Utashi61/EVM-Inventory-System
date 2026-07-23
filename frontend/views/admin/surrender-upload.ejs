@@ -1,0 +1,80 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'surrender-upload'; %>
+
+<div class="app-layout">
+  <%- include('../partials/admin-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Upload Surrender Records</h1>
+      <div class="topbar-actions">
+        <a href="/admin/surrender/template" class="btn btn-primary btn-sm">📥 Download Template</a>
+      </div>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <!-- Instructions -->
+      <div class="card" style="border-left:4px solid var(--accent);">
+        <div class="card-header"><h2>📋 How to Use</h2></div>
+        <div class="card-body" style="padding:20px 24px;">
+          <ol style="margin:0;padding-left:20px;line-height:2.2;">
+            <li>Click <strong>"Download Template"</strong> (top right) to get the Excel form.</li>
+            <li>Fill in each row — one row per <strong>BU + CU pair</strong> from the same Dzongkhag.</li>
+            <li>Upload the completed file below.</li>
+            <li>The imported items will immediately appear in the <strong>Surrender to ECIL</strong> section on the Admin Dashboard — ready for you to dispatch to ECIL Hyderabad.</li>
+          </ol>
+          <div class="alert alert-info" style="margin-top:16px;">
+            💡 After a successful upload, go to the <a href="/admin/dashboard"><strong>Dashboard</strong></a> to surrender the imported equipment to ECIL.
+          </div>
+          <div class="alert alert-warning" style="margin-top:8px;">
+            ⚠️ Duplicate serial numbers are skipped automatically.
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Form -->
+      <div class="card">
+        <div class="card-header"><h2>📤 Upload Completed Form</h2></div>
+        <div class="card-body" style="padding:24px;">
+          <form action="/admin/surrender/upload" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+              <label class="form-label">Select Filled Excel File (.xlsx) <span class="required">*</span></label>
+              <input type="file" name="surrender_file" class="form-control"
+                     accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+              <small class="text-muted">Must be <code>.xlsx</code> format — the same template downloaded above.</small>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">📤 Import Records</button>
+              <a href="/admin/dashboard" class="btn btn-outline">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Column reference -->
+      <div class="card">
+        <div class="card-header"><h2>📐 Template Columns</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Column</th><th>Required</th><th>Example</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Sl. No</strong></td><td><span class="badge badge-secondary">Auto</span></td><td>1, 2, 3…</td><td>Pre-filled in template — do not change</td></tr>
+              <tr><td><strong>Ballot Unit</strong></td><td><span class="badge badge-danger">Yes</span></td><td>BU-2232</td><td>Serial number of the Ballot Unit</td></tr>
+              <tr><td><strong>Control Unit</strong></td><td><span class="badge badge-danger">Yes</span></td><td>CU-2232</td><td>Serial number of the paired Control Unit</td></tr>
+              <tr><td><strong>Year</strong></td><td><span class="badge badge-warning">Recommended</span></td><td>2024</td><td>Year the equipment was in use / surrendered</td></tr>
+              <tr><td><strong>Remarks</strong></td><td><span class="badge badge-secondary">Optional</span></td><td>Election 2024</td><td>Any notes about the surrender</td></tr>
+              <tr><td><strong>Dzongkhag</strong></td><td><span class="badge badge-danger">Yes</span></td><td>Bumthang</td><td>Must match a Dzongkhag name in the system</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

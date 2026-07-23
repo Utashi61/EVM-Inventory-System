@@ -1,0 +1,219 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'transfers'; %>
+
+<div class="app-layout">
+  <%- include('../partials/admin-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Equipment Transfers</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-transfer')">🔄 New Transfer</button>
+      </div>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <!-- Admin's own activity only -->
+      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px;">
+        <div class="card" style="flex:1; min-width:220px; padding:18px 20px; border-left:4px solid var(--accent, #4f46e5);">
+          <div style="font-size:28px; font-weight:700; color:var(--primary);"><%= adminStats.transferred_count %></div>
+          <div class="text-muted" style="font-size:13px;">📤 Equipment Transferred to Dzongkhag</div>
+        </div>
+        <div class="card" style="flex:1; min-width:220px; padding:18px 20px; border-left:4px solid #28a745;">
+          <div style="font-size:28px; font-weight:700; color:var(--primary);"><%= adminStats.received_count %></div>
+          <div class="text-muted" style="font-size:13px;">📥 Equipment Received from Dzongkhag (Surrendered)</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        ℹ️ This page shows only <strong>your own</strong> activity as Admin — equipment you've transferred to a Dzongkhag, and equipment Dzongkhags have surrendered back to you.
+        DzEO/DzERO/EA "Issue To RO" activity and RO/Presiding Officer returns are not listed here — download the full <a href="/admin/reports">Transfer Report</a> from Reports to see everything system-wide.
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2>Transfer History (Admin Only)</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Date</th>
+                <th>Serial No.</th>
+                <th>Type</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Status</th>
+                <th>Remarks</th>
+                <th>Update</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!transfers || !transfers.length) { %>
+              <tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🔄</div><h3>No transfers yet</h3><p>Equipment you transfer to a Dzongkhag, or Dzongkhags surrender back to you, will appear here.</p></div></td></tr>
+              <% } else { %>
+                <% transfers.forEach((t, i) => { %>
+                <tr>
+                  <td><%= i + 1 %></td>
+                  <td><%= t.transfer_date ? new Date(t.transfer_date).toLocaleDateString() : '—' %></td>
+                  <td><strong><%= t.serial_number || 'Unknown' %></strong></td>
+                  <td><span class="badge badge-primary"><%= t.equipment_type || 'N/A' %></span></td>
+                  <td>
+                    <%= t.from_user || 'HQ / Admin' %>
+                    <% if (t.from_location) { %><br><span class="text-muted" style="font-size:11px;"><%= t.from_location %></span><% } %>
+                  </td>
+                  <td>
+                    <%= t.to_user || '—' %>
+                    <% if (t.to_location) { %><br><span class="text-muted" style="font-size:11px;"><%= t.to_location %></span><% } %>
+                  </td>
+                  <td>
+                    <span class="badge <%= t.status === 'Received' ? 'badge-success' : t.status === 'Returned' ? 'badge-info' : 'badge-warning' %>">
+                      <%= t.status %>
+                    </span>
+                  </td>
+                  <td><%= t.remarks || '—' %></td>
+                  <td>
+                    <% if (t.transfer_type === 'Surrender') { %>
+                      <% if (t.status === 'Returning') { %>
+                        <form action="/admin/surrender/<%= t.id %>/receive" method="POST">
+                          <button type="submit" class="btn btn-sm btn-success">✅ Confirm Receipt</button>
+                        </form>
+                      <% } else { %>
+                        <span class="text-muted" style="font-size:12px;">✔ Received</span>
+                      <% } %>
+                    <% } else { %>
+                      <form action="/admin/transfers/<%= t.id %>/status" method="POST" style="display:flex; gap:4px;">
+                        <select name="status" class="form-control" style="padding:4px; font-size:12px; width:110px;">
+                          <option value="Pending" <%= t.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                          <option value="Received" <%= t.status === 'Received' ? 'selected' : '' %>>Received</option>
+                          <option value="Returned" <%= t.status === 'Returned' ? 'selected' : '' %>>Returned</option>
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary">✓</button>
+                      </form>
+                    <% } %>
+                  </td>
+                </tr>
+                <% }) %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: New Transfer -->
+<div id="modal-transfer" class="modal-overlay">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <h3>🔄 Bulk Transfer — Thimphu HQ ⇄ Dzongkhag</h3>
+      <button class="modal-close" onclick="closeModal('modal-transfer')">✕</button>
+    </div>
+    <form action="/admin/transfers" method="POST">
+
+      <div class="form-group">
+        <label class="form-label">Select Equipment (tick multiple) <span class="required">*</span></label>
+        <%
+          const typeCountsAdmin = {};
+          (equipment||[]).forEach(eq => { typeCountsAdmin[eq.equipment_type] = (typeCountsAdmin[eq.equipment_type]||0)+1; });
+        %>
+        <div id="admin-eq-counts" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <% Object.entries(typeCountsAdmin).forEach(([t,c]) => { %>
+          <span class="badge" data-admin-type="<%= t %>"
+            style="background:#d4edda;color:#155724;padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+            <%= t %>: <span class="admin-rem"><%= c %></span> available
+          </span>
+          <% }) %>
+        </div>
+        <div style="max-height:240px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
+          <% if (!equipment || !equipment.length) { %>
+            <p class="text-muted" style="margin:0;">No equipment available to transfer right now.</p>
+          <% } else {
+               let lastType = null;
+               equipment.forEach(eq => {
+                 if (eq.equipment_type !== lastType) {
+                   if (lastType !== null) { %></div><% }
+          %>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 4px;">
+            <span style="font-weight:600;font-size:12px;color:var(--primary);text-transform:uppercase;"><%= eq.equipment_type %></span>
+            <a href="#" onclick="adminSelectAllType('<%= eq.equipment_type %>');return false;" style="font-size:11px;">Select all</a>
+          </div>
+          <div>
+          <%   lastType = eq.equipment_type; } %>
+          <label class="equip-check-row" style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;">
+            <input type="checkbox" name="equipment_ids" value="<%= eq.id %>" class="admin-eq-checkbox"
+                   data-type="<%= eq.equipment_type %>" onchange="adminUpdateCounts()">
+            <span><%= eq.serial_number %> <span class="text-muted" style="font-size:11px;">(<%= eq.dzongkhag_name || 'Thimphu HQ' %>)</span></span>
+          </label>
+          <% }) %>
+          </div>
+          <% } %>
+        </div>
+        <small class="text-muted" id="admin-selected-count">0 item(s) selected</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Transfer To (Dzongkhag Officer) <span class="required">*</span></label>
+        <select name="to_user_id" class="form-control" required>
+          <option value="">-- Select Recipient --</option>
+          <% if (typeof users !== 'undefined' && users && users.length > 0) { %>
+            <% let lastDz2 = null; users.forEach(u => {
+                if (u.dzongkhag_name !== lastDz2) {
+                  if (lastDz2 !== null) { %></optgroup><% }
+                  %><optgroup label="<%= u.dzongkhag_name || 'Unassigned' %>"><%
+                  lastDz2 = u.dzongkhag_name; }
+            %><option value="<%= u.id %>"><%= u.full_name %> (<%= u.role %>)</option>
+            <% }) %></optgroup>
+          <% } else { %>
+            <option disabled>⚠️ No active DzEO / DzERO / EA officers found</option>
+          <% } %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Transfer Date <span class="required">*</span></label>
+        <input type="date" name="transfer_date" class="form-control"
+               value="<%= new Date().toISOString().split('T')[0] %>" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Remarks</label>
+        <textarea name="remarks" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">🔄 Transfer Selected Equipment</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-transfer')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .equip-check-row:hover { background:#f7fafc; }
+  .equip-check-row:has(input:checked) { background:#f8d7da !important; }
+</style>
+<script src="/js/main.js"></script>
+<script>
+const adminOrigCounts = <%- JSON.stringify(Object.fromEntries((equipment||[]).reduce((m,eq)=>{ m.set(eq.equipment_type,(m.get(eq.equipment_type)||0)+1);return m; },new Map()))) %>;
+function adminSelectAllType(type) {
+  document.querySelectorAll(`.admin-eq-checkbox[data-type="${type}"]`).forEach(cb => { cb.checked=true; });
+  adminUpdateCounts();
+}
+function adminUpdateCounts() {
+  const byType = {};
+  document.querySelectorAll('.admin-eq-checkbox:checked').forEach(cb => {
+    const t = cb.dataset.type; byType[t] = (byType[t]||0)+1;
+  });
+  document.querySelectorAll('[data-admin-type]').forEach(b => {
+    const t = b.getAttribute('data-admin-type');
+    const rem = (adminOrigCounts[t]||0) - (byType[t]||0);
+    b.querySelector('.admin-rem').textContent = rem;
+    b.style.background = rem <= 0 ? '#f8d7da' : '#d4edda';
+    b.style.color      = rem <= 0 ? '#721c24' : '#155724';
+  });
+  const total = document.querySelectorAll('.admin-eq-checkbox:checked').length;
+  document.getElementById('admin-selected-count').textContent = `${total} item(s) selected`;
+}
+</script>
+</body>
+</html>
+</html>

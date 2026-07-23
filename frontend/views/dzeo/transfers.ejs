@@ -1,0 +1,183 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'transfers'; %>
+
+<div class="app-layout">
+  <%- include('../partials/dzeo-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Transfer Equipment to RO</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-transfer')">🔄 New Transfer</button>
+      </div>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <!-- Transfer History -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Transfer History</h2>
+          <span class="text-muted"><%= currentUser.dzongkhag_name %></span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Transfer Date</th>
+                <th>Serial No.</th>
+                <th>Type</th>
+                <th>Sent To (RO)</th>
+                <th>Status</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!transfers || !transfers.length) { %>
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <div class="empty-icon">🔄</div>
+                    <h3>No transfers yet</h3>
+                    <p>Transfer equipment to a Returning Officer to get started.</p>
+                  </div>
+                </td>
+              </tr>
+              <% } else { %>
+                <% transfers.forEach((t, i) => { %>
+                <tr>
+                  <td><%= i + 1 %></td>
+                  <td><%= new Date(t.transfer_date).toLocaleDateString() %></td>
+                  <td><strong><%= t.serial_number %></strong></td>
+                  <td><span class="badge badge-primary"><%= t.equipment_type %></span></td>
+                  <td><%= t.to_user %></td>
+                  <td>
+                    <span class="badge
+                      <%= t.status === 'Received' ? 'badge-success' :
+                          t.status === 'Returned' ? 'badge-info' : 'badge-warning' %>">
+                      <%= t.status %>
+                    </span>
+                  </td>
+                  <td><%= t.remarks || '—' %></td>
+                </tr>
+                <% }) %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: New Transfer to RO -->
+<div id="modal-transfer" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🔄 Transfer Equipment to RO</h3>
+      <button class="modal-close" onclick="closeModal('modal-transfer')">✕</button>
+    </div>
+    
+    <!-- Verified with Backend Controller: Maps to exports.postTransfer via your dzeo router stack -->
+    <form action="/dzeo/transfers" method="POST">
+
+      <div class="form-group">
+        <label class="form-label">Select Equipment <span class="required">*</span></label>
+        <select name="equipment_id" class="form-control" required>
+          <option value="">-- Select Equipment --</option>
+          <% if (typeof equipment !== 'undefined' && equipment && equipment.length) { %>
+            <% equipment.forEach(eq => { %>
+            <option value="<%= eq.id %>"><%= eq.serial_number %> (<%= eq.equipment_type %>)</option>
+            <% }) %>
+          <% } %>
+        </select>
+        <span class="text-muted" style="font-size:12px; margin-top:4px; display:block;">
+          Only equipment currently held by you is listed.
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Constituency <span class="required">*</span></label>
+        <select name="constituency_id" id="dzeo-const" class="form-control" required
+                onchange="handleConstituencyChange(this.value)">
+          <option value="">-- Select Constituency --</option>
+          <% if (typeof constituencies !== 'undefined' && constituencies && constituencies.length) { %>
+            <% constituencies.forEach(c => { %>
+            <option value="<%= c.id %>"><%= c.name %></option>
+            <% }) %>
+          <% } %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Returning Officer (RO) <span class="required">*</span></label>
+        <select name="to_user_id" id="dzeo-ro" class="form-control" required>
+          <option value="">-- Select Constituency First --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Transfer Date <span class="required">*</span></label>
+        <input type="date" name="transfer_date" class="form-control" id="transfer-date-input" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Remarks</label>
+        <textarea name="remarks" class="form-control" rows="2"
+                  placeholder="Optional notes about this transfer..."></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">📤 Transfer Equipment</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-transfer')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Embed backend filtered RO list into frontend JSON safely -->
+<script>
+  const allOfficersInDistrict = <%_ if (typeof ros !== 'undefined' && ros) { _%><%- JSON.stringify(ros) %><%_ } else { _%>[]<%_ } _%>;
+</script>
+
+<script src="/js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const dateInput = document.getElementById('transfer-date-input');
+  if (dateInput) {
+    const today = new Date();
+    const offset = today.getTimezoneOffset();
+    const localDate = new Date(today.getTime() - (offset * 60 * 1000));
+    dateInput.value = localDate.toISOString().split('T')[0];
+  }
+});
+
+// FIXED: Bypasses the missing fetch endpoint route entirely by utilizing the local embedded JSON data array!
+function handleConstituencyChange(constituencyId) {
+  const roSel = document.getElementById('dzeo-ro');
+  
+  roSel.innerHTML = '<option value="">-- Select Returning Officer --</option>';
+  
+  if (!constituencyId) {
+    roSel.innerHTML = '<option value="">-- Select Constituency First --</option>';
+    return;
+  }
+
+  // Filter officers matching selected constituency from locally passed `ros` array
+  const filteredRos = allOfficersInDistrict.filter(user => String(user.constituency_id) === String(constituencyId));
+  
+  if (filteredRos.length === 0) {
+    roSel.innerHTML = '<option value="">No RO assigned to this constituency</option>';
+    return;
+  }
+
+  filteredRos.forEach(user => {
+    const option = document.createElement('option');
+    option.value = user.id;
+    option.textContent = user.full_name;
+    roSel.appendChild(option);
+  });
+}
+</script>
+</body>
+</html>

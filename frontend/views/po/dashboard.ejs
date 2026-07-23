@@ -1,0 +1,112 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'dashboard'; %>
+
+<div class="app-layout">
+  <%- include('../partials/po-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Presiding Officer Dashboard — <%= currentUser.polling_station_name || currentUser.constituency_name %></h1>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <% if (!currentUser.polling_station_id) { %>
+      <div class="alert alert-warning">
+        ⚠️ You are not yet attached to a Polling Station. Please ask your Admin to assign one to your account.
+      </div>
+      <% } %>
+
+      <div class="stat-grid">
+        <div class="stat-card accent">
+          <div class="stat-icon">📥</div>
+          <div class="stat-value"><%= summary.equipment_received %></div>
+          <div class="stat-label">Equipment Received</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-icon">📤</div>
+          <div class="stat-value"><%= summary.returned %></div>
+          <div class="stat-label">Equipment Returned</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value"><%= summary.functional %></div>
+          <div class="stat-label">Functional</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">❌</div>
+          <div class="stat-value"><%= summary.non_functional %></div>
+          <div class="stat-label">Non-Functional</div>
+        </div>
+      </div>
+
+      <% if (typeof incomingTransfers !== 'undefined' && incomingTransfers && incomingTransfers.length > 0) { %>
+        <div class="card mt-3 mb-3" style="border-left: 4px solid var(--accent, #007bff);">
+          <div class="card-header" style="background: none; font-weight: bold; padding: 15px; color: var(--primary);">
+            ⚠️ Action Required: Incoming Equipment from your RO
+          </div>
+          <div style="padding: 0 15px 15px 15px;">
+            <div class="table-responsive">
+              <table class="table" style="width: 100%; text-align: left; border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 2px solid #eee;">
+                    <th style="padding: 10px;">Sent By</th>
+                    <th style="padding: 10px;">Equipment Type</th>
+                    <th style="padding: 10px;">Serial Number</th>
+                    <th style="padding: 10px;">Remarks</th>
+                    <th style="padding: 10px; text-align: right;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% incomingTransfers.forEach(function(transfer) { %>
+                    <tr style="border-bottom: 1px solid #eee;">
+                      <td style="padding: 10px;"><%= transfer.from_user || 'Returning Officer' %></td>
+                      <td style="padding: 10px;"><%= transfer.equipment_type %></td>
+                      <td style="padding: 10px;"><code style="background:#f4f4f4; padding:2px 6px; border-radius:4px;"><%= transfer.serial_number %></code></td>
+                      <td style="padding: 10px;"><small class="text-muted"><%= transfer.remarks || '—' %></small></td>
+                      <td style="padding: 10px; text-align: right;">
+                        <form action="/po/transfers/<%= transfer.transfer_id %>/accept" method="POST" style="display:inline;">
+                          <button type="submit" class="btn btn-sm btn-success" style="padding: 6px 14px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+                            Accept Equipment
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <div class="flex gap-3 mt-3">
+        <a href="/po/equipment" class="card" style="flex:1; padding:28px; text-align:center; cursor:pointer; text-decoration:none; transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+          <div style="font-size:40px; margin-bottom:14px;">📦</div>
+          <h3 style="color:var(--primary); font-size:16px;">View Equipment</h3>
+          <p class="text-muted" style="margin-top:8px; font-size:13px;">View equipment assigned to your Polling Station</p>
+        </a>
+        <a href="/po/return" class="card" style="flex:1; padding:28px; text-align:center; cursor:pointer; text-decoration:none; transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+          <div style="font-size:40px; margin-bottom:14px;">↩️</div>
+          <h3 style="color:var(--primary); font-size:16px;">Return Equipment</h3>
+          <p class="text-muted" style="margin-top:8px; font-size:13px;">Return equipment to your RO after elections</p>
+        </a>
+        <a href="/po/reports" class="card" style="flex:1; padding:28px; text-align:center; cursor:pointer; text-decoration:none; transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+          <div style="font-size:40px; margin-bottom:14px;">📑</div>
+          <h3 style="color:var(--primary); font-size:16px;">Reports</h3>
+          <p class="text-muted" style="margin-top:8px; font-size:13px;">Download PDF and Excel reports</p>
+        </a>
+      </div>
+
+      <% if (summary.equipment_received > 0) { %>
+      <div class="alert alert-info mt-2">
+        ℹ️ You currently hold <strong><%= summary.equipment_received %></strong> equipment item(s).
+        Please return them to your RO after elections are complete.
+      </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'surrender'; %>
+<div class="app-layout">
+  <%- include('../partials/dzeo-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Surrender Equipment</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-surrender')">📮 Surrender Equipment</button>
+      </div>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="alert alert-info">
+        ℹ️ Surrender equipment from <strong><%= currentUser.dzongkhag_name %></strong> to Election Commission HQ.
+        <strong>Control Unit (CU) and Ballot Unit (BU) with the same serial number must always be surrendered together</strong>
+        — e.g. CU-2232 and BU-2232. They are paired and cannot function independently.
+      </div>
+
+      <!-- Equipment in store as pairs -->
+      <% if (pairs && pairs.length > 0) { %>
+      <div class="card">
+        <div class="card-header">
+          <h2>📦 Equipment In Store — by Pair</h2>
+          <span class="text-muted"><%= equipment.length %> item(s)</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Serial Group</th><th>Equipment</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <% pairs.forEach((p, i) => { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><strong><%= p.suffix || '—' %></strong></td>
+                <td>
+                  <% p.items.forEach(eq => { %>
+                  <span class="badge badge-primary" style="margin:2px;"><%= eq.equipment_type %>: <%= eq.serial_number %></span>
+                  <% }) %>
+                </td>
+                <td>
+                  <% const allFunctional = p.items.every(e=>e.status==='Functional'); %>
+                  <span class="badge <%= allFunctional ? 'badge-success' : 'badge-danger' %>">
+                    <%= allFunctional ? 'Functional' : 'Non-Functional' %>
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-accent"
+                          onclick="selectPair('<%= p.items.map(e=>e.id).join(',') %>','<%= p.items.map(e=>e.serial_number+' ('+e.equipment_type+')').join(' + ') %>')">
+                    📮 Surrender Pair
+                  </button>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <% } else { %>
+      <div class="alert alert-info">No equipment currently in store to surrender.</div>
+      <% } %>
+
+      <!-- Surrender History -->
+      <div class="card">
+        <div class="card-header"><h2>📋 Surrender History</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Serial No.</th><th>Type</th><th>Issue Date</th><th>Surrender Date</th><th>Status</th><th>Fault</th><th>Remarks</th></tr>
+            </thead>
+            <tbody>
+              <% if (!history || !history.length) { %>
+              <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📋</div><h3>No surrender history</h3></div></td></tr>
+              <% } %>
+              <% (history || []).forEach((t, i) => { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><strong><%= t.serial_number %></strong></td>
+                <td><span class="badge badge-primary"><%= t.equipment_type %></span></td>
+                <td><%= t.start_date ? new Date(t.start_date).toLocaleDateString() : '—' %></td>
+                <td><%= t.surrender_date ? new Date(t.surrender_date).toLocaleDateString() : '—' %></td>
+                <td><span class="badge badge-info"><%= t.status %></span></td>
+                <td><% if (t.fault_type) { %><span class="badge badge-danger"><%= t.fault_type %></span><% } else { %>—<% } %></td>
+                <td><%= t.remarks || '—' %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Surrender Modal -->
+<div id="modal-surrender" class="modal-overlay">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>📮 Surrender Equipment to Admin / HQ</h3>
+      <button class="modal-close" onclick="closeModal('modal-surrender')">✕</button>
+    </div>
+    <form action="/dzeo/surrender" method="POST" id="surrender-form">
+
+      <div class="form-group">
+        <label class="form-label">Selected Equipment</label>
+        <div id="surrender-preview" class="alert alert-info" style="padding:10px;font-size:13px;">
+          Use "Surrender Pair" to select equipment.
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Issue Date <span class="required">*</span></label>
+          <input type="date" name="start_date" class="form-control" required>
+          <small class="text-muted">Date added to inventory</small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Surrender Date <span class="required">*</span></label>
+          <input type="date" name="surrender_date" class="form-control"
+                 value="<%= new Date().toISOString().split('T')[0] %>" required>
+          <small class="text-muted">Actual handover date</small>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Condition <span class="required">*</span></label>
+        <select name="condition_status" id="surrender-condition" class="form-control" required
+                onchange="toggleFault(this.value)">
+          <option value="Functional">✅ Functional</option>
+          <option value="Non-Functional">❌ Non-Functional</option>
+        </select>
+      </div>
+      <div class="form-group" id="fault-group" style="display:none;">
+        <label class="form-label">Fault Type <span class="required">*</span></label>
+        <select name="fault_type" id="fault-type-sel" class="form-control">
+          <option value="">-- Select Fault --</option>
+          <% (faultTypes || []).forEach(ft => { %>
+          <option value="<%= ft %>"><%= ft %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Remarks</label>
+        <textarea name="remarks" class="form-control" rows="2" placeholder="Reason for surrender..."></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">📮 Confirm Surrender</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-surrender')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+<script>
+function selectPair(idsStr, label) {
+  // Remove any previously added equipment_ids inputs
+  document.querySelectorAll('input[name="equipment_ids"]').forEach(el => el.remove());
+
+  // Add one hidden input per ID
+  const form = document.getElementById('surrender-form');
+  idsStr.split(',').forEach(id => {
+    const inp = document.createElement('input');
+    inp.type  = 'hidden';
+    inp.name  = 'equipment_ids';
+    inp.value = id.trim();
+    form.appendChild(inp);
+  });
+
+  document.getElementById('surrender-preview').innerHTML =
+    '<strong>Surrendering:</strong> ' + label;
+  openModal('modal-surrender');
+}
+
+function toggleFault(val) {
+  const grp = document.getElementById('fault-group');
+  const sel = document.getElementById('fault-type-sel');
+  if (val === 'Non-Functional') {
+    grp.style.display = 'block';
+    sel.setAttribute('required', 'required');
+  } else {
+    grp.style.display = 'none';
+    sel.removeAttribute('required');
+    sel.value = '';
+  }
+}
+</script>
+</body>
+</html>

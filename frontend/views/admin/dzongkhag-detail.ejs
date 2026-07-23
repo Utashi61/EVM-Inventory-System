@@ -1,0 +1,106 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'dashboard'; %>
+
+<div class="app-layout">
+  <%- include('../partials/admin-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1> <%= dzong.name %></h1>
+      <div class="topbar-actions">
+        <a href="/admin/dashboard" class="btn btn-outline btn-sm">← Back</a>
+      </div>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value"><%= equipment.length %></div>
+          <div class="stat-label">Total Equipment</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value"><%= equipment.filter(e => e.status === 'Functional').length %></div>
+          <div class="stat-label">Functional</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">❌</div>
+          <div class="stat-value"><%= equipment.filter(e => e.status === 'Non-Functional').length %></div>
+          <div class="stat-label">Non-Functional</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2>Equipment List</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Serial Number</th>
+                <th>Type</th>
+                <th>Constituency</th>
+                <th>Gewog</th>
+                <th>Status</th>
+                <th>Current Holder</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% equipment.forEach((eq, i) => { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><strong><%= eq.serial_number %></strong></td>
+                <td><span class="badge badge-primary"><%= eq.equipment_type %></span></td>
+                <td><%= eq.constituency_name || '—' %></td>
+                <td><%= eq.gewog_name || '—' %></td>
+                <td><span class="badge <%= eq.status === 'Functional' ? 'badge-success' : 'badge-danger' %>"><%= eq.status %></span></td>
+                <td><%= eq.current_holder || 'Unassigned' %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2>Transfer History</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Date</th>
+                <th>Serial No.</th>
+                <th>Type</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!transfers.length) { %>
+              <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🔄</div><h3>No transfers</h3></div></td></tr>
+              <% } %>
+              <% transfers.forEach((t, i) => { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><%= new Date(t.transfer_date).toLocaleDateString() %></td>
+                <td><strong><%= t.serial_number %></strong></td>
+                <td><%= t.equipment_type %></td>
+                <td><%= t.from_user || 'HQ' %></td>
+                <td><%= t.to_user %></td>
+                <td><span class="badge <%= t.status === 'Received' ? 'badge-success' : t.status === 'Returned' ? 'badge-info' : 'badge-warning' %>"><%= t.status %></span></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

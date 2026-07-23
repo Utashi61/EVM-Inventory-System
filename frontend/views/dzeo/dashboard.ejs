@@ -1,0 +1,164 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'dashboard'; %>
+
+<div class="app-layout">
+  <%- include('../partials/dzeo-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Dashboard — <%= currentUser.dzongkhag_name %></h1>
+      <span class="text-muted" style="font-size:13px;"><%= currentUser.role %></span>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <!-- Summary Cards -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value"><%= summary.total_equipment %></div>
+          <div class="stat-label">In Dzongkhag Store</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value"><%= summary.functional %></div>
+          <div class="stat-label">Functional</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">❌</div>
+          <div class="stat-value"><%= summary.non_functional %></div>
+          <div class="stat-label">Non-Functional</div>
+        </div>
+        <div class="stat-card accent">
+          <div class="stat-icon">📤</div>
+          <div class="stat-value"><%= summary.issued_to_ro %></div>
+          <div class="stat-label">Currently Issued to RO/PO</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-icon">📮</div>
+          <div class="stat-value"><%= summary.surrendered_to_hq %></div>
+          <div class="stat-label">Surrendered to HQ</div>
+        </div>
+      </div>
+      <p class="text-muted" style="font-size:12px; margin-top:-6px;">
+        "In Dzongkhag Store" reflects what's currently in your possession right now — it goes down when equipment is issued out or surrendered, and back up when equipment is received.
+      </p>
+
+      <!-- Incoming Transfers from Admin (Thimphu HQ / another Dzongkhag) -->
+      <% if (incomingTransfers && incomingTransfers.length > 0) { %>
+      <div class="card" style="border-left: 4px solid var(--accent);">
+        <div class="card-header">
+          <h2>📥 Incoming Transfers — Action Required</h2>
+          <span class="badge badge-warning"><%= incomingTransfers.length %> awaiting</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>From</th><th>Serial No.</th><th>Type</th><th>Remarks</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <% incomingTransfers.forEach(t => { %>
+              <tr>
+                <td><strong><%= t.from_location || t.from_user || 'Thimphu HQ' %></strong></td>
+                <td><code><%= t.serial_number %></code></td>
+                <td><%= t.equipment_type %></td>
+                <td><%= t.remarks || '—' %></td>
+                <td>
+                  <form action="/dzeo/transfers/<%= t.transfer_id %>/receive" method="POST">
+                    <button type="submit" class="btn btn-sm btn-success">✅ Confirm Receipt</button>
+                  </form>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- Pending Returns from RO/PO -->
+      <% if (pendingReturns && pendingReturns.length > 0) { %>
+      <div class="card" style="border-left: 4px solid var(--accent);">
+        <div class="card-header">
+          <h2>⚠️ Pending Returns — Action Required</h2>
+          <span class="badge badge-warning"><%= pendingReturns.length %> awaiting</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>From Officer</th><th>Serial No.</th><th>Type</th><th>Fault Type</th><th>Remarks</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <% pendingReturns.forEach(t => { %>
+              <tr>
+                <td><strong><%= t.from_user %></strong></td>
+                <td><code><%= t.serial_number %></code></td>
+                <td><%= t.equipment_type %></td>
+                <td>
+                  <% if (t.fault_type) { %>
+                    <span class="badge badge-danger"><%= t.fault_type %></span>
+                  <% } else { %>
+                    <span class="badge badge-success">Functional</span>
+                  <% } %>
+                </td>
+                <td><%= t.remarks || '—' %></td>
+                <td>
+                  <form action="/dzeo/receive-return/<%= t.transfer_id %>" method="POST">
+                    <button type="submit" class="btn btn-sm btn-success">✅ Confirm Receipt</button>
+                  </form>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- Quarterly Functionality Check -->
+      <div class="card" style="border-left: 4px solid var(--info);">
+        <div class="card-header">
+          <h2>🗓️ Quarterly Equipment Check — <%= quarterlyCheck.quarterLabel %></h2>
+          <a href="/dzeo/quarterly-check" class="btn btn-sm btn-primary">Open Check List</a>
+        </div>
+        <div class="page-body" style="padding: 16px 24px;">
+          <p class="text-muted">
+            <strong><%= quarterlyCheck.checked %></strong> of <strong><%= quarterlyCheck.total %></strong> equipment checked for <%= quarterlyCheck.quarterLabel %>.
+            <% if (quarterlyCheck.pending > 0) { %>
+              <span class="badge badge-warning"><%= quarterlyCheck.pending %> pending</span>
+            <% } else { %>
+              <span class="badge badge-success">All checked ✅</span>
+            <% } %>
+          </p>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="flex gap-3">
+        <a href="/dzeo/equipment" class="card" style="flex:1;padding:24px;text-align:center;cursor:pointer;text-decoration:none;transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+          <div style="font-size:36px;margin-bottom:12px;">📦</div>
+          <h3 style="color:var(--primary);">Equipment</h3>
+          <p class="text-muted" style="margin-top:8px;font-size:13px;">View and manage equipment in <%= currentUser.dzongkhag_name %></p>
+        </a>
+        <a href="/dzeo/issue-to" class="card" style="flex:1;padding:24px;text-align:center;cursor:pointer;text-decoration:none;transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+          <div style="font-size:36px;margin-bottom:12px;">📤</div>
+          <h3 style="color:var(--primary);">Issue To</h3>
+          <p class="text-muted" style="margin-top:8px;font-size:13px;">Issue equipment to RO</p>
+        </a>
+        <a href="/dzeo/surrender" class="card" style="flex:1;padding:24px;text-align:center;cursor:pointer;text-decoration:none;transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+          <div style="font-size:36px;margin-bottom:12px;">📮</div>
+          <h3 style="color:var(--primary);">Surrender</h3>
+          <p class="text-muted" style="margin-top:8px;font-size:13px;">Surrender equipment up to Admin / Election Commission HQ</p>
+        </a>
+        <a href="/dzeo/reports" class="card" style="flex:1;padding:24px;text-align:center;cursor:pointer;text-decoration:none;transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+          <div style="font-size:36px;margin-bottom:12px;">📑</div>
+          <h3 style="color:var(--primary);">Reports</h3>
+          <p class="text-muted" style="margin-top:8px;font-size:13px;">Generate PDF and Excel reports</p>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

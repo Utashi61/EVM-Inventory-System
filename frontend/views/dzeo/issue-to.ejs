@@ -1,0 +1,219 @@
+<%- include('../partials/head') %>
+<% locals.activePage = 'issue-to'; %>
+
+<div class="app-layout">
+  <%- include('../partials/dzeo-sidebar') %>
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Issue To RO</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-issue')">📤 Issue Equipment</button>
+      </div>
+    </div>
+    <div class="page-body">
+      <%- include('../partials/flash') %>
+
+      <div class="alert alert-info">
+        ℹ️ DzEO/DzERO/EA issue equipment straight to an <strong>RO</strong>. The RO then issues equipment further down to a Presiding Officer themselves.
+      </div>
+
+      <!-- Issue History Table -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Issue History — <%= currentUser.dzongkhag_name %></h2>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Date</th>
+                <th>Serial No.</th>
+                <th>Type</th>
+                <th>Issued To (RO)</th>
+                <th>Status</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!issues || !issues.length) { %>
+              <tr><td colspan="7">
+                <div class="empty-state">
+                  <div class="empty-icon">📤</div>
+                  <h3>No issues yet</h3>
+                  <p>Use "Issue Equipment" to assign equipment to an RO.</p>
+                </div>
+              </td></tr>
+              <% } else { %>
+                <% issues.forEach((t, i) => { %>
+                <tr>
+                  <td><%= i + 1 %></td>
+                  <td><%= new Date(t.transfer_date).toLocaleDateString() %></td>
+                  <td><strong><%= t.serial_number %></strong></td>
+                  <td><span class="badge badge-primary"><%= t.equipment_type %></span></td>
+                  <td><%= t.to_user %></td>
+                  <td>
+                    <span class="badge <%= t.status === 'Received' ? 'badge-success' : t.status === 'Returned' ? 'badge-info' : 'badge-warning' %>">
+                      <%= t.status %>
+                    </span>
+                  </td>
+                  <td><%= t.remarks || '—' %></td>
+                </tr>
+                <% }) %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Issue Equipment -->
+<div id="modal-issue" class="modal-overlay">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3>📤 Issue Equipment to RO</h3>
+      <button class="modal-close" onclick="closeModal('modal-issue')">✕</button>
+    </div>
+    <form action="/dzeo/issue-to" method="POST">
+
+      <div class="form-group">
+        <label class="form-label">Select Equipment <span class="required">*</span></label>
+
+        <!-- Live "remaining in store" counters, per equipment type -->
+        <div id="equipment-counts" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+          <% (typeCounts || []).forEach(tc => { %>
+          <span class="badge" data-type-count="<%= tc.equipment_type %>"
+                style="background:#d4edda; color:#155724; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:600;">
+            <%= tc.equipment_type %>: <span class="remaining-num"><%= tc.available %></span> left in store
+          </span>
+          <% }) %>
+        </div>
+
+        <div style="max-height:280px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+          <% if (!equipment || !equipment.length) { %>
+            <p class="text-muted" style="margin:0;">No functional equipment available in your store right now.</p>
+          <% } else {
+               let lastType = null;
+               equipment.forEach(eq => {
+                 if (eq.equipment_type !== lastType) {
+                   if (lastType !== null) { %></div><% }
+          %>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin:12px 0 6px;">
+            <span style="font-weight:600; font-size:12px; color:var(--primary); text-transform:uppercase;"><%= eq.equipment_type %></span>
+            <a href="#" onclick="selectAllOfType('<%= eq.equipment_type %>'); return false;" style="font-size:11px;">Select all</a>
+          </div>
+          <div>
+          <%   lastType = eq.equipment_type;
+                 }
+          %>
+          <label class="equip-check-row" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer;">
+            <input type="checkbox" name="equipment_ids" value="<%= eq.id %>" class="equip-checkbox"
+                   data-type="<%= eq.equipment_type %>" onchange="onEquipCheck(this)">
+            <span><%= eq.serial_number %></span>
+          </label>
+          <% }) %>
+          </div>
+          <% } %>
+        </div>
+        <small class="text-muted" id="selected-count">0 item(s) selected</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Constituency <span class="required">*</span></label>
+        <select name="constituency_id" id="issue-const" class="form-control" required
+                onchange="filterOfficersByConstituency(this.value)">
+          <option value="">-- Select Constituency --</option>
+          <% if (constituencies && constituencies.length) { %>
+            <% constituencies.forEach(c => { %>
+            <option value="<%= c.id %>"><%= c.name %></option>
+            <% }) %>
+          <% } %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Issue To (RO) <span class="required">*</span></label>
+        <select name="to_user_id" id="issue-officer" class="form-control" required>
+          <option value="">-- Select Constituency First --</option>
+        </select>
+        <small class="text-muted">DzEO/DzERO/EA can only issue to an RO — not directly to a Presiding Officer.</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Remarks</label>
+        <textarea name="remarks" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">📤 Issue Selected Equipment</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-issue')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .equip-check-row:hover { background: #f7fafc; }
+  .equip-check-row.checked-row { background: #f8d7da !important; color: #721c24; }
+</style>
+
+<!-- Embed officers list + original per-type counts for client-side logic -->
+<script>
+const allOfficers = <%- JSON.stringify(ros || []) %>;
+const typeOriginalCounts = <%- JSON.stringify((typeCounts || []).reduce((acc, tc) => { acc[tc.equipment_type] = tc.available; return acc; }, {})) %>;
+</script>
+<script src="/js/main.js"></script>
+<script>
+async function filterOfficersByConstituency(constituencyId) {
+  // Filter officers (RO only) — RO operates at Constituency level, no Gewog needed.
+  const officerSel = document.getElementById('issue-officer');
+  officerSel.innerHTML = '<option value="">-- Select RO --</option>';
+  const filtered = allOfficers.filter(o => String(o.constituency_id) === String(constituencyId));
+  if (filtered.length === 0) {
+    officerSel.innerHTML = '<option value="">No RO assigned to this constituency</option>';
+  } else {
+    filtered.forEach(o => officerSel.add(new Option(o.full_name, o.id)));
+  }
+}
+
+// Tick a box → row turns red (selected to issue). Every type's "left in
+// store" badge (green) recalculates live as boxes are checked/unchecked.
+function onEquipCheck(checkbox) {
+  const row = checkbox.closest('.equip-check-row');
+  row.classList.toggle('checked-row', checkbox.checked);
+  updateCounts();
+}
+
+function selectAllOfType(type) {
+  document.querySelectorAll(`.equip-checkbox[data-type="${type}"]`).forEach(cb => {
+    cb.checked = true;
+    cb.closest('.equip-check-row').classList.add('checked-row');
+  });
+  updateCounts();
+}
+
+function updateCounts() {
+  const checkedByType = {};
+  document.querySelectorAll('.equip-checkbox:checked').forEach(cb => {
+    const t = cb.dataset.type;
+    checkedByType[t] = (checkedByType[t] || 0) + 1;
+  });
+
+  document.querySelectorAll('[data-type-count]').forEach(badge => {
+    const type = badge.getAttribute('data-type-count');
+    const original = typeOriginalCounts[type] || 0;
+    const checked = checkedByType[type] || 0;
+    const remaining = original - checked;
+    badge.querySelector('.remaining-num').textContent = remaining;
+    badge.style.background = remaining <= 0 ? '#f8d7da' : '#d4edda';
+    badge.style.color      = remaining <= 0 ? '#721c24' : '#155724';
+  });
+
+  const total = document.querySelectorAll('.equip-checkbox:checked').length;
+  document.getElementById('selected-count').textContent = `${total} item(s) selected`;
+}
+</script>
+</body>
+</html>
